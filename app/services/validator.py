@@ -1,30 +1,48 @@
-def validate_schemas(schemas):
+def validate_schemas(schemas: dict):
 
     errors = []
+    warnings = []
 
-    db_tables = {t["name"] for t in schemas["db_schema"]["tables"]}
-    api_endpoints = schemas["api_schema"]["endpoints"]
-    ui_pages = schemas["ui_schema"]["pages"]
+    ui = schemas.get("ui_schema", {})
+    api = schemas.get("api_schema", {})
+    db = schemas.get("db_schema", {})
 
-    # API → DB consistency check
-    for api in api_endpoints:
-        table = api.get("linked_table")
-        if table and table not in db_tables:
-            errors.append(f"API references missing DB table: {table}")
+    ui_pages = {p["name"].lower() for p in ui.get("pages", [])}
+    api_endpoints = {e["path"] for e in api.get("endpoints", [])}
+    db_tables = {t["name"].lower() for t in db.get("tables", [])}
 
-    # UI must exist
-    if len(ui_pages) == 0:
-        errors.append("No UI pages defined")
+    # -------------------------
+    # 1. UI ↔ DB consistency
+    # -------------------------
+    for page in ui_pages:
+        if page not in db_tables:
+            warnings.append(f"UI page '{page}' has no matching DB table")
 
-    # API must exist
-    if len(api_endpoints) == 0:
-        errors.append("No API endpoints defined")
+    # -------------------------
+    # 2. API ↔ DB consistency
+    # -------------------------
+    for endpoint in api_endpoints:
+        clean = endpoint.replace("/api/", "").lower()
+        if clean not in db_tables:
+            warnings.append(f"API endpoint '{endpoint}' has no DB mapping")
 
-    # DB without API = design issue
-    if len(db_tables) > 0 and len(api_endpoints) == 0:
-        errors.append("DB exists but no API layer")
+    # -------------------------
+    # 3. Missing core schema checks
+    # -------------------------
+    if not ui_pages:
+        errors.append("UI schema has no pages")
 
+    if not api_endpoints:
+        errors.append("API schema has no endpoints")
+
+    if not db_tables:
+        errors.append("DB schema has no tables")
+
+    # -------------------------
+    # Final result
+    # -------------------------
     return {
         "valid": len(errors) == 0,
-        "errors": errors
+        "errors": errors,
+        "warnings": warnings
     }
