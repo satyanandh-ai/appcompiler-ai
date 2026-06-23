@@ -1,20 +1,6 @@
-def generate_design(intent):
-
-    design = {
-        "entities": [],
-        "roles": ["Admin", "User"],
-        "pages": []
+def design_system(schema: dict):
+    return {
+        "architecture": "FastAPI + Services Layer",
+        "components": schema["features"],
+        "db": "PostgreSQL (planned)"
     }
-
-    if "contacts" in intent.features:
-        design["entities"].append("Contact")
-        design["pages"].append("Contacts")
-
-    if "dashboard" in intent.features:
-        design["pages"].append("Dashboard")
-
-    if "login" in intent.features:
-        design["entities"].append("User")
-        design["pages"].append("Login")
-
-    return design
